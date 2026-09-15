@@ -1,0 +1,18 @@
+{
+  "name": "financas-worker",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-08",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  "kv_namespaces": [
+    { "binding": "DATA_KV", "id": "c58a2c930f8d4c508d02ec6f2ce0e311" }
+  ],
+  "vars": {
+    "VAPID_PUBLIC_KEY": "BAcrEYZmFk6GiOU06SRzBpFtjepIY5A_mKLU-11vOTdfa25b_HgBIWqFjmuCsKYZ1eNdlb5ua5stL4_jHjsp-2M"
+  },
+  "triggers": {
+    "crons": ["0 8 * * *"]
+  }
+}
