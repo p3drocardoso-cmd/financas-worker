@@ -105,6 +105,57 @@
   .sync-status.error::before{background:var(--red);}
   .sync-status.error{color:var(--red);}
 
+  .view-tabs{
+    display:flex;gap:6px;margin:14px 20px 0;
+    background:var(--ink-700);padding:4px;border-radius:10px;
+  }
+  .viewtab{
+    flex:1;background:none;border:none;color:var(--text-muted);
+    padding:9px 4px;border-radius:8px;font-size:13px;font-weight:500;
+    cursor:pointer;font-family:'Inter',sans-serif;transition:background .15s ease, color .15s ease;
+  }
+  .viewtab.active{background:var(--ink-600);color:var(--text);}
+
+  .panel-section{
+    margin:0 20px 22px;background:var(--ink-700);border:1px solid var(--line);
+    border-radius:var(--radius);padding:16px;
+  }
+  .panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .panel-header h3{
+    font-family:'Space Grotesk',sans-serif;font-size:14.5px;font-weight:600;margin:0;color:var(--text);
+  }
+  .mini-add-btn{
+    background:var(--teal-dim);color:var(--teal);border:1px solid var(--teal);
+    border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;
+  }
+
+  .goal-card{background:var(--ink-800);border:1px solid var(--line);border-radius:10px;padding:12px 13px;margin-bottom:8px;cursor:pointer;}
+  .goal-card:last-child{margin-bottom:0;}
+  .goal-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;}
+  .goal-name{font-size:13.5px;font-weight:600;color:var(--text);}
+  .goal-vals{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);white-space:nowrap;}
+
+  .budget-row{margin-bottom:14px;}
+  .budget-row:last-child{margin-bottom:0;}
+  .budget-row-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;font-size:13px;}
+  .budget-row-top span:first-child{color:var(--text);font-weight:500;}
+  .budget-row-top span:last-child{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);}
+  .budget-bar{height:7px;border-radius:4px;background:var(--ink-600);overflow:hidden;}
+  .budget-bar-fill{height:100%;border-radius:4px;transition:width .3s ease;}
+  .budget-bar-fill.ok{background:var(--teal);}
+  .budget-bar-fill.warn{background:var(--amber);}
+  .budget-bar-fill.over{background:var(--red);}
+  .budget-bar-fill.goal{background:var(--teal);}
+
+  .legend{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
+  .legend-row{display:flex;align-items:center;gap:8px;font-size:12.5px;}
+  .legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .legend-label{flex:1;color:var(--text);}
+  .legend-val{font-family:'IBM Plex Mono',monospace;color:var(--text-muted);font-size:11.5px;white-space:nowrap;}
+
+  input[type=checkbox]{width:16px;height:16px;margin:0;accent-color:var(--teal);}
+  .recur-icon{width:11px;height:11px;color:var(--teal);vertical-align:-1.5px;margin-left:2px;}
+
   .month-nav{
     display:flex;align-items:center;justify-content:space-between;
     padding:14px 20px 4px;
@@ -404,6 +455,12 @@
     <div class="sync-status" id="syncStatus">A ligar...</div>
   </header>
 
+  <div class="view-tabs">
+    <button class="viewtab active" data-view="transactions">Transações</button>
+    <button class="viewtab" data-view="insights">Painel</button>
+  </div>
+
+  <div id="transactionsView">
   <div class="month-nav">
     <button class="arrow" id="monthPrev" aria-label="Mês anterior">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg>
@@ -436,6 +493,29 @@
 
   <div id="pullIndicator">Solta para atualizar</div>
   <div id="list"></div>
+  </div>
+
+  <div id="insightsView" style="display:none;">
+    <div class="panel-section">
+      <div class="panel-header"><h3>Metas de poupança</h3><button class="mini-add-btn" id="addGoalBtn">+ Nova</button></div>
+      <div id="goalsList"></div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-header"><h3>Orçamentos por categoria</h3></div>
+      <div id="budgetsList"></div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-header"><h3>Despesas por categoria — <span id="donutMonthLabel"></span></h3></div>
+      <div id="donutChartZone"></div>
+    </div>
+
+    <div class="panel-section" style="margin-bottom:110px;">
+      <div class="panel-header"><h3>Tendência — últimos 6 meses</h3></div>
+      <div id="trendChartZone"></div>
+    </div>
+  </div>
 
   <button class="fab" id="fabAdd" aria-label="Adicionar transação">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -481,6 +561,10 @@
     </div>
     <label for="fNotes">Nota (opcional)</label>
     <textarea id="fNotes" rows="2" placeholder="Ex: pagamento em 3x" style="margin-bottom:16px;"></textarea>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:16px;">
+      <input type="checkbox" id="fRecurring">
+      <span style="font-size:13px;color:var(--text);">Transação recorrente (lembrar todos os meses)</span>
+    </label>
     <button class="primary-btn" id="fSave">Guardar</button>
   </div>
 </div>
@@ -506,6 +590,25 @@
   </div>
 </div>
 
+<div id="goalOverlay" class="sheet-overlay">
+  <div id="goalSheet" class="bottom-sheet">
+    <div class="sheet-header">
+      <h2 id="goalFormTitle">Nova meta</h2>
+      <button class="icon-btn" id="goalClose" aria-label="Cancelar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <label for="goalName">Nome</label>
+    <input type="text" id="goalName" placeholder="Ex: Férias 2027">
+    <label for="goalTarget">Valor objetivo (€)</label>
+    <input type="number" id="goalTarget" min="1" step="1" inputmode="numeric" placeholder="Ex: 2000">
+    <label for="goalSaved">Já poupado (€)</label>
+    <input type="number" id="goalSaved" min="0" step="1" inputmode="numeric" placeholder="0" style="margin-bottom:16px;">
+    <button class="primary-btn" id="goalSaveBtn">Guardar</button>
+    <button class="ghost-btn" id="goalDeleteBtn" style="width:100%;margin-top:10px;display:none;color:var(--red);border-color:var(--red);">Eliminar meta</button>
+  </div>
+</div>
+
 <div id="trashOverlay" class="sheet-overlay">
   <div id="trashSheet" class="bottom-sheet">
     <h2>Lixo</h2>
@@ -527,12 +630,19 @@
 
 <div id="settingsOverlay" class="sheet-overlay">
   <div id="settingsSheet" class="bottom-sheet">
-    <h2>Definições</h2>
+    <div class="sheet-header">
+      <h2>Definições</h2>
+      <button class="icon-btn" id="settingsClose" aria-label="Cancelar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>
+      </button>
+    </div>
     <label for="budgetInput">Avisar quando as despesas do mês ultrapassarem (€)</label>
     <input type="number" id="budgetInput" min="0" step="1" inputmode="numeric" placeholder="Ex: 1000">
-    <p class="hint">Deixa em branco para desativar o aviso. Esta definição é partilhada por todos os aparelhos.</p>
+    <p class="hint">Deixa em branco para desativar o aviso.</p>
+    <label style="margin-top:4px;">Limites por categoria (opcional)</label>
+    <div id="categoryLimitsZone" style="margin-bottom:6px;"></div>
+    <p class="hint">Deixa em branco as categorias sem limite. Estas definições são partilhadas por todos os aparelhos.</p>
     <button class="primary-btn" id="settingsSave">Guardar</button>
-    <button class="ghost-btn" id="settingsCancel" style="width:100%;margin-top:10px;">Cancelar</button>
   </div>
 </div>
 
@@ -557,7 +667,7 @@ const SETTINGS_API = '/api/settings';
 let PIN = localStorage.getItem(PIN_KEY) || '';
 let dataVersion = localStorage.getItem(VERSION_KEY) || '0';
 let transactions = [];
-let budgetThreshold = null;
+let settingsData = { budgetThreshold: null, categoryLimits: {}, goals: [] };
 
 const MONTH_NAMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const CATEGORIES = {
@@ -710,8 +820,21 @@ async function loadSettings(){
     const res = await fetch(SETTINGS_API, {headers: {'x-app-pin': PIN}});
     if(!res.ok) return;
     const data = await res.json();
-    budgetThreshold = (data && typeof data.budgetThreshold === 'number') ? data.budgetThreshold : null;
+    settingsData = {
+      budgetThreshold: (data && typeof data.budgetThreshold === 'number') ? data.budgetThreshold : null,
+      categoryLimits: (data && data.categoryLimits && typeof data.categoryLimits === 'object') ? data.categoryLimits : {},
+      goals: Array.isArray(data && data.goals) ? data.goals : []
+    };
   }catch(err){ /* silencioso — definição não crítica */ }
+}
+async function saveSettings(){
+  try{
+    await fetch(SETTINGS_API, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'x-app-pin': PIN},
+      body: JSON.stringify(settingsData)
+    });
+  }catch(err){ /* fica só localmente se falhar */ }
 }
 
 function showPinPrompt(wrongPin){
@@ -750,7 +873,183 @@ document.getElementById('monthLabel').onclick = () => {
   updateMonthNav(); render();
 };
 
-/* --- Filtro ao tocar nas caixas --- */
+/* --- Separador Transações / Painel --- */
+document.querySelectorAll('.viewtab').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.viewtab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const view = btn.dataset.view;
+    document.getElementById('transactionsView').style.display = view === 'transactions' ? '' : 'none';
+    document.getElementById('insightsView').style.display = view === 'insights' ? '' : 'none';
+    if(view === 'insights') renderInsights();
+  };
+});
+
+const CATEGORY_COLORS = ['#3fa796','#f2a93b','#e5484d','#8b7cf6','#4a90d9','#e879a6','#84cc16','#fb923c','#94a3b8'];
+
+function renderInsights(){
+  renderGoals();
+  renderBudgets();
+  renderDonut();
+  renderTrend();
+}
+
+/* --- Metas de poupança --- */
+function renderGoals(){
+  const zone = document.getElementById('goalsList');
+  const goals = settingsData.goals || [];
+  if(goals.length === 0){
+    zone.innerHTML = `<p class="hint" style="margin:0;">Ainda sem metas. Toca em "+ Nova" para criares a primeira.</p>`;
+    return;
+  }
+  zone.innerHTML = goals.map(g => {
+    const pct = Math.min(100, (g.saved / g.target) * 100);
+    return `<div class="goal-card" data-goal="${g.id}">
+      <div class="goal-top"><span class="goal-name">${escapeHtml(g.name)}</span><span class="goal-vals">${formatMoney(g.saved)} / ${formatMoney(g.target)}</span></div>
+      <div class="budget-bar"><div class="budget-bar-fill goal" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+  zone.querySelectorAll('[data-goal]').forEach(el => {
+    el.onclick = () => openGoalEditor(el.dataset.goal);
+  });
+}
+let editingGoalId = null;
+const goalOverlay = document.getElementById('goalOverlay');
+document.getElementById('addGoalBtn').onclick = () => openGoalEditor(null);
+function openGoalEditor(id){
+  editingGoalId = id;
+  const g = (settingsData.goals || []).find(g => g.id === id);
+  document.getElementById('goalFormTitle').textContent = g ? 'Editar meta' : 'Nova meta';
+  document.getElementById('goalName').value = g ? g.name : '';
+  document.getElementById('goalTarget').value = g ? g.target : '';
+  document.getElementById('goalSaved').value = g ? g.saved : '0';
+  document.getElementById('goalDeleteBtn').style.display = g ? 'block' : 'none';
+  goalOverlay.classList.add('open');
+}
+document.getElementById('goalClose').onclick = () => goalOverlay.classList.remove('open');
+goalOverlay.addEventListener('click', e => { if(e.target === goalOverlay) goalOverlay.classList.remove('open'); });
+document.getElementById('goalSaveBtn').onclick = async () => {
+  const name = document.getElementById('goalName').value.trim();
+  const target = parseFloat(document.getElementById('goalTarget').value);
+  const saved = parseFloat(document.getElementById('goalSaved').value) || 0;
+  if(!name || !target || target <= 0){ alert('Preenche o nome e um valor objetivo válido.'); return; }
+  settingsData.goals = settingsData.goals || [];
+  if(editingGoalId){
+    const g = settingsData.goals.find(g => g.id === editingGoalId);
+    if(g) Object.assign(g, { name, target, saved });
+  } else {
+    settingsData.goals.push({ id: uid(), name, target, saved });
+  }
+  await saveSettings();
+  renderGoals();
+  goalOverlay.classList.remove('open');
+};
+document.getElementById('goalDeleteBtn').onclick = async () => {
+  if(!confirm('Eliminar esta meta?')) return;
+  settingsData.goals = (settingsData.goals || []).filter(g => g.id !== editingGoalId);
+  await saveSettings();
+  renderGoals();
+  goalOverlay.classList.remove('open');
+};
+
+/* --- Orçamentos por categoria --- */
+function renderBudgets(){
+  const zone = document.getElementById('budgetsList');
+  const limits = settingsData.categoryLimits || {};
+  const cats = Object.keys(limits).filter(c => limits[c] > 0);
+  if(cats.length === 0){
+    zone.innerHTML = `<p class="hint" style="margin:0;">Ainda sem limites definidos. Define-os nas Definições (ícone de engrenagem).</p>`;
+    return;
+  }
+  const thisMonth = toISODate(new Date()).slice(0,7);
+  const monthExpenses = transactions.filter(t => !t.deleted && t.type === 'expense' && monthKeyOf(t.date) === thisMonth);
+  zone.innerHTML = cats.map(cat => {
+    const spent = monthExpenses.filter(t => t.category === cat).reduce((s,t) => s + t.amount, 0);
+    const limit = limits[cat];
+    const pct = Math.min(100, (spent / limit) * 100);
+    const status = spent > limit ? 'over' : (pct >= 80 ? 'warn' : 'ok');
+    return `<div class="budget-row">
+      <div class="budget-row-top"><span>${escapeHtml(cat)}</span><span>${formatMoney(spent)} / ${formatMoney(limit)}</span></div>
+      <div class="budget-bar"><div class="budget-bar-fill ${status}" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+/* --- Gráfico circular: despesas por categoria (mês atual) --- */
+function renderDonut(){
+  const zone = document.getElementById('donutChartZone');
+  const thisMonth = toISODate(new Date()).slice(0,7);
+  document.getElementById('donutMonthLabel').textContent = formatMonthLabel(thisMonth);
+  const monthExpenses = transactions.filter(t => !t.deleted && t.type === 'expense' && monthKeyOf(t.date) === thisMonth);
+  if(monthExpenses.length === 0){
+    zone.innerHTML = `<p class="hint" style="margin:0;">Ainda sem despesas este mês.</p>`;
+    return;
+  }
+  const byCategory = {};
+  monthExpenses.forEach(t => { byCategory[t.category] = (byCategory[t.category] || 0) + t.amount; });
+  const total = Object.values(byCategory).reduce((a,b) => a+b, 0);
+  const entries = Object.entries(byCategory).sort((a,b) => b[1]-a[1]);
+  const r = 55, cx = 70, cy = 70, circumference = 2 * Math.PI * r;
+  let offset = 0, circles = '', legend = '';
+  entries.forEach(([cat, amt], i) => {
+    const frac = amt / total;
+    const dash = frac * circumference;
+    const color = CATEGORY_COLORS[i % CATEGORY_COLORS.length];
+    circles += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="18" stroke-dasharray="${dash} ${circumference-dash}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    offset += dash;
+    legend += `<div class="legend-row"><span class="legend-dot" style="background:${color}"></span><span class="legend-label">${escapeHtml(cat)}</span><span class="legend-val">${formatMoney(amt)} · ${Math.round(frac*100)}%</span></div>`;
+  });
+  zone.innerHTML = `
+    <svg viewBox="0 0 140 140" style="width:150px;height:150px;display:block;margin:0 auto;">
+      ${circles}
+      <text x="70" y="66" text-anchor="middle" fill="#8fa09a" font-size="10" font-family="Inter">Total</text>
+      <text x="70" y="82" text-anchor="middle" fill="#e9ecec" font-size="13" font-weight="700" font-family="Space Grotesk">${formatMoney(total)}</text>
+    </svg>
+    <div class="legend">${legend}</div>
+  `;
+}
+
+/* --- Tendência: últimos 6 meses --- */
+function renderTrend(){
+  const zone = document.getElementById('trendChartZone');
+  const months = [];
+  const now = new Date();
+  for(let i = 5; i >= 0; i--){
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  }
+  const data = months.map(mk => {
+    const items = transactions.filter(t => !t.deleted && monthKeyOf(t.date) === mk);
+    return {
+      mk,
+      income: items.filter(t => t.type === 'income').reduce((s,t) => s+t.amount, 0),
+      expense: items.filter(t => t.type === 'expense').reduce((s,t) => s+t.amount, 0)
+    };
+  });
+  const maxVal = Math.max(1, ...data.map(d => Math.max(d.income, d.expense)));
+  const barW = 14, chartH = 100;
+  let x = 10, bars = '', labels = '';
+  data.forEach(d => {
+    const incH = (d.income / maxVal) * chartH;
+    const expH = (d.expense / maxVal) * chartH;
+    bars += `<rect x="${x}" y="${chartH-incH+10}" width="${barW}" height="${Math.max(incH,1)}" fill="#3fa796" rx="2"/>`;
+    bars += `<rect x="${x+barW+4}" y="${chartH-expH+10}" width="${barW}" height="${Math.max(expH,1)}" fill="#e5484d" rx="2"/>`;
+    const [, m] = d.mk.split('-');
+    labels += `<text x="${x+barW+2}" y="${chartH+26}" text-anchor="middle" font-size="8" fill="#8fa09a" font-family="Inter">${MONTH_NAMES[parseInt(m,10)-1].slice(0,3)}</text>`;
+    x += barW*2 + 4 + 20;
+  });
+  zone.innerHTML = `
+    <div style="overflow-x:auto;">
+      <svg viewBox="0 0 ${x} 150" style="width:100%;min-width:${x}px;height:150px;display:block;">${bars}${labels}</svg>
+    </div>
+    <div style="display:flex;gap:16px;justify-content:center;margin-top:6px;">
+      <div class="legend-row" style="width:auto;"><span class="legend-dot" style="background:#3fa796"></span><span class="legend-label">Receitas</span></div>
+      <div class="legend-row" style="width:auto;"><span class="legend-dot" style="background:#e5484d"></span><span class="legend-label">Despesas</span></div>
+    </div>
+  `;
+}
+
+
 let activeFilter = null;
 document.querySelectorAll('.stat.clickable').forEach(el => {
   el.addEventListener('click', () => {
@@ -862,7 +1161,7 @@ function render(){
         <div class="type-circle ${circleClass}">${circleContent}</div>
         <div class="info">
           <div class="name">${highlightMatch(t.desc, q)}</div>
-          <div class="date">${fmtDate(t.date)} <span class="status-dot">·</span> <span class="cat-text">${escapeHtml(t.category)}</span></div>
+          <div class="date">${fmtDate(t.date)} <span class="status-dot">·</span> <span class="cat-text">${escapeHtml(t.category)}</span>${t.recurring ? `<svg class="recur-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M21 12a9 9 0 1 0-3 6.7L21 16"/><path d="M21 21v-5h-5"/></svg>` : ''}</div>
           ${t.notes ? `<div class="note-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>${escapeHtml(t.notes)}</span></div>` : ''}
         </div>
         <div class="amount ${t.type}">${t.type === 'income' ? '+' : '−'} ${formatMoney(t.amount)}</div>
@@ -908,14 +1207,19 @@ function render(){
   });
 
   checkBudgetBanner(income, expense);
+
+  if(document.getElementById('insightsView').style.display !== 'none'){
+    renderInsights();
+  }
 }
 
 /* --- Aviso de orçamento --- */
 function checkBudgetBanner(income, expense){
   const zone = document.getElementById('bannerZone');
   if(zone.dataset.locked === '1') return; // não sobrepor o banner de notificações
-  if(budgetThreshold && viewMode === 'month' && viewMonth === toISODate(new Date()).slice(0,7) && expense > budgetThreshold){
-    zone.innerHTML = `<div class="banner warn"><span>As despesas deste mês já ultrapassaram o limite de ${formatMoney(budgetThreshold)}.</span></div>`;
+  const threshold = settingsData.budgetThreshold;
+  if(threshold && viewMode === 'month' && viewMonth === toISODate(new Date()).slice(0,7) && expense > threshold){
+    zone.innerHTML = `<div class="banner warn"><span>As despesas deste mês já ultrapassaram o limite de ${formatMoney(threshold)}.</span></div>`;
   } else if(!zone.dataset.locked) {
     zone.innerHTML = '';
   }
@@ -1157,25 +1461,37 @@ document.getElementById('exportPdfBtn').onclick = () => {
 
 /* --- Definições --- */
 const settingsOverlay = document.getElementById('settingsOverlay');
+function renderCategoryLimitInputs(){
+  const zone = document.getElementById('categoryLimitsZone');
+  zone.innerHTML = CATEGORIES.expense.map(cat => {
+    const val = settingsData.categoryLimits[cat] || '';
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <span style="flex:1;font-size:13px;color:var(--text);">${escapeHtml(cat)}</span>
+      <input type="number" min="0" step="1" inputmode="numeric" style="width:90px;margin-bottom:0;" data-catlimit="${escapeHtml(cat)}" value="${val}" placeholder="—">
+    </div>`;
+  }).join('');
+}
 document.getElementById('settingsBtn').onclick = () => {
-  document.getElementById('budgetInput').value = budgetThreshold || '';
+  document.getElementById('budgetInput').value = settingsData.budgetThreshold || '';
+  renderCategoryLimitInputs();
   settingsOverlay.classList.add('open');
 };
 document.getElementById('settingsSave').onclick = async () => {
   const val = document.getElementById('budgetInput').value.trim();
   const num = val === '' ? null : parseFloat(val);
-  budgetThreshold = (num && num > 0) ? num : null;
-  try{
-    await fetch(SETTINGS_API, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json', 'x-app-pin': PIN},
-      body: JSON.stringify({ budgetThreshold })
-    });
-  }catch(err){ /* fica só localmente se falhar */ }
+  settingsData.budgetThreshold = (num && num > 0) ? num : null;
+  const newLimits = {};
+  document.querySelectorAll('[data-catlimit]').forEach(inp => {
+    const v = parseFloat(inp.value);
+    if(v && v > 0) newLimits[inp.dataset.catlimit] = v;
+  });
+  settingsData.categoryLimits = newLimits;
+  await saveSettings();
   render();
+  renderInsights();
   settingsOverlay.classList.remove('open');
 };
-document.getElementById('settingsCancel').onclick = () => settingsOverlay.classList.remove('open');
+document.getElementById('settingsClose').onclick = () => settingsOverlay.classList.remove('open');
 settingsOverlay.addEventListener('click', e => { if(e.target === settingsOverlay) settingsOverlay.classList.remove('open'); });
 
 /* --- Formulário de nova/editar transação --- */
@@ -1205,6 +1521,7 @@ function openAddForm(){
   document.getElementById('fDesc').value = '';
   document.getElementById('fAmount').value = '';
   document.getElementById('fNotes').value = '';
+  document.getElementById('fRecurring').checked = false;
   const dmy = isoToDMY(toISODate(new Date()));
   document.getElementById('fDay').value = dmy.day;
   document.getElementById('fMonth').value = dmy.month;
@@ -1222,6 +1539,7 @@ function openEditForm(id){
   document.getElementById('fDesc').value = t.desc;
   document.getElementById('fAmount').value = t.amount;
   document.getElementById('fNotes').value = t.notes || '';
+  document.getElementById('fRecurring').checked = !!t.recurring;
   const dmy = isoToDMY(t.date);
   document.getElementById('fDay').value = dmy.day;
   document.getElementById('fMonth').value = dmy.month;
@@ -1246,15 +1564,16 @@ document.getElementById('fSave').onclick = () => {
     document.getElementById('fYear').value
   );
   const notes = document.getElementById('fNotes').value.trim();
+  const recurring = document.getElementById('fRecurring').checked;
   if(!desc || !amount || amount <= 0 || !date){
     alert('Preenche a descrição, um valor válido e uma data válida (dia-mês-ano).');
     return;
   }
   if(editingId){
     const t = transactions.find(t => t.id === editingId);
-    if(t) Object.assign(t, { desc, amount, type: currentFormType, category, date, notes });
+    if(t) Object.assign(t, { desc, amount, type: currentFormType, category, date, notes, recurring });
   } else {
-    transactions.push({ id: uid(), desc, amount, type: currentFormType, category, date, notes });
+    transactions.push({ id: uid(), desc, amount, type: currentFormType, category, date, notes, recurring });
   }
   save(); render();
   overlay.classList.remove('open');
