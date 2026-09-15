@@ -212,6 +212,46 @@ async function checkBudgetAndNotify(env) {
   return result;
 }
 
+// ===== Verificação diária (Cron) — lembretes de transações recorrentes =====
+
+async function checkRecurringAndNotify(env) {
+  const dataRaw = await env.DATA_KV.get('transactions');
+  const transactions = dataRaw ? JSON.parse(dataRaw) : [];
+
+  const now = new Date();
+  const todayDay = now.getUTCDate();
+  const monthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+
+  const recurringOnes = transactions.filter(t => !t.deleted && t.recurring && typeof t.date === 'string');
+  const dueToday = [];
+
+  for (const t of recurringOnes) {
+    const day = parseInt(t.date.slice(8, 10), 10);
+    if (todayDay !== day) continue;
+
+    const alreadyLogged = transactions.some(o =>
+      !o.deleted && typeof o.date === 'string' && o.date.slice(0, 7) === monthKey &&
+      o.desc === t.desc && o.category === t.category
+    );
+    if (alreadyLogged) continue;
+
+    const guardKey = `recur_sent:${t.id}:${monthKey}`;
+    if (await env.DATA_KV.get(guardKey)) continue;
+
+    dueToday.push(t);
+    await env.DATA_KV.put(guardKey, '1', { expirationTtl: 40 * 86400 });
+  }
+
+  if (dueToday.length === 0) return { sent: 0, reason: 'nada devido hoje' };
+
+  const names = dueToday.map(t => t.desc).slice(0, 5).join(', ');
+  const payload = {
+    title: `${dueToday.length} transação(ões) recorrente(s) hoje`,
+    body: names
+  };
+  return sendToAllSubscriptions(env, payload);
+}
+
 // ===== Worker =====
 
 const SECURITY_HEADERS = {
@@ -334,6 +374,6 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(checkBudgetAndNotify(env));
+    ctx.waitUntil(Promise.all([checkBudgetAndNotify(env), checkRecurringAndNotify(env)]));
   }
 };
