@@ -654,6 +654,10 @@
       <p class="hint" id="importCountText"></p>
       <div id="importPreviewTable" style="max-height:320px;overflow-y:auto;margin-bottom:4px;"></div>
       <button class="primary-btn" id="importConfirmBtn" style="margin-top:12px;">Importar transações</button>
+      <div id="importDebugZone" style="display:none;margin-top:16px;">
+        <button class="ghost-btn" id="importDebugToggle" style="width:100%;">Alguma data ou valor parece errado? Ver texto lido do PDF</button>
+        <textarea id="importDebugText" readonly rows="6" style="margin-top:10px;display:none;font-size:10px;"></textarea>
+      </div>
     </div>
   </div>
 </div>
@@ -1568,20 +1572,43 @@ function parseAnyDate(v){
   if(typeof v === 'string'){
     const s = v.trim();
     let m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
-    if(m){ let [, d, mo, y] = m; if(y.length===2) y = '20'+y; return dmyToISO(d, mo, y); }
+    if(m){ let [, d, mo, y] = m; if(y.length===2) y = '20'+y; return sanityCheckYear(dmyToISO(d, mo, y)); }
     m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-    if(m){ const [, y, mo, d] = m; return dmyToISO(d, mo, y); }
+    if(m){ const [, y, mo, d] = m; return sanityCheckYear(dmyToISO(d, mo, y)); }
   }
   return null;
 }
+function sanityCheckYear(iso){
+  // Rejeita datas fora de um intervalo plausível para um extrato bancário —
+  // evita aceitar silenciosamente uma data corrompida pela leitura do PDF.
+  if(!iso) return null;
+  const y = parseInt(iso.slice(0,4), 10);
+  const nowYear = new Date().getFullYear();
+  if(y < nowYear - 6 || y > nowYear + 1) return null;
+  return iso;
+}
 
 function resetImportFlow(){
-  importRawRows = []; importParsedRows = []; importValueMode = 'single';
+  importRawRows = []; importParsedRows = []; importValueMode = 'single'; lastPdfRawText = '';
   document.getElementById('importFile').value = '';
   document.getElementById('importStep1').style.display = 'block';
   document.getElementById('importStep2').style.display = 'none';
   document.getElementById('importStep3').style.display = 'none';
+  document.getElementById('importDebugZone').style.display = 'none';
+  document.getElementById('importDebugText').style.display = 'none';
+  document.getElementById('importDebugText').value = '';
 }
+document.getElementById('importDebugToggle').onclick = () => {
+  const box = document.getElementById('importDebugText');
+  if(box.style.display === 'none'){
+    box.value = lastPdfRawText.slice(0, 6000);
+    box.style.display = 'block';
+    box.focus();
+    box.select();
+  } else {
+    box.style.display = 'none';
+  }
+};
 document.getElementById('importBtn').onclick = () => { resetImportFlow(); importOverlay.classList.add('open'); };
 document.getElementById('importClose').onclick = () => { importOverlay.classList.remove('open'); resetImportFlow(); };
 importOverlay.addEventListener('click', e => { if(e.target === importOverlay){ importOverlay.classList.remove('open'); resetImportFlow(); } });
@@ -1621,6 +1648,7 @@ function handleSpreadsheetImport(file){
   reader.readAsArrayBuffer(file);
 }
 
+let lastPdfRawText = '';
 async function handlePdfImport(file){
   try{
     const buf = await file.arrayBuffer();
@@ -1631,6 +1659,7 @@ async function handlePdfImport(file){
       const content = await page.getTextContent();
       fullText += content.items.map(it => it.str).join(' ') + '\n';
     }
+    lastPdfRawText = fullText;
     const parsed = extractTransactionsFromPdfText(fullText);
     if(parsed.length === 0){
       alert('Não consegui encontrar transações neste PDF. O Excel/CSV costuma dar resultados bem melhores, se conseguires exportar nesse formato.');
@@ -1640,6 +1669,7 @@ async function handlePdfImport(file){
     document.getElementById('importStep1').style.display = 'none';
     document.getElementById('importStep3').style.display = 'block';
     document.getElementById('importCountText').textContent = `Confirma ${parsed.length} transação(ões) antes de importar — a leitura de PDF é aproximada, revê com atenção:`;
+    document.getElementById('importDebugZone').style.display = 'block';
     renderImportPreviewTable();
   }catch(err){
     alert('Não consegui ler este PDF.');
@@ -1657,7 +1687,7 @@ function extractTransactionsFromPdfText(text){
   // Espaços entre colunas são opcionais: alguns bancos exportam o texto do
   // PDF com as colunas "coladas", sem espaço nenhum entre elas.
   const patternA = new RegExp(
-    '(\\d{4}-\\d{1,2}-\\d{1,2})\\s*(?:\\d{4}-\\d{1,2}-\\d{1,2})\\s*(.+?)\\s*(' + amtPart + ')\\s*(?:' + amtPart + ')',
+    '(\\d{4}-\\d{2}-\\d{2})\\s*(?:\\d{4}-\\d{2}-\\d{2})\\s*(.+?)\\s*(' + amtPart + ')\\s*(?:' + amtPart + ')',
     'g'
   );
   let out = [];
